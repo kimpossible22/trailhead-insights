@@ -51,6 +51,7 @@ const TrailCard = ({ trail, index }: TrailCardProps) => {
 
   return (
     <div
+      id={`trail-${trail.id}`}
       className={`opacity-0 ${delayClass} bg-card border border-border rounded-lg p-5 hover-lift relative overflow-hidden`}
       style={{ animationDelay: `${index * 0.08}s`, animationFillMode: 'forwards' }}
     >
