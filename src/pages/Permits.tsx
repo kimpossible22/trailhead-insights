@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { permits } from '@/data/permits';
 import { Bell, ExternalLink, Mail } from 'lucide-react';
+import { toast } from 'sonner';
 
 const statusStyles = {
   open: 'bg-status-open',
@@ -26,6 +27,27 @@ const Permits = () => {
     setSelectedPermits((prev) =>
       prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
     );
+  };
+
+  const handleSetAlerts = () => {
+    if (!alertEmail.trim()) {
+      toast.error('Please enter your email address.');
+      return;
+    }
+    if (selectedPermits.length === 0) {
+      toast.error('Select at least one permit to watch.');
+      return;
+    }
+    const names = selectedPermits
+      .map((id) => permits.find((p) => p.id === id)?.name)
+      .filter(Boolean)
+      .join(', ');
+    toast.success(`Alerts set for: ${names}`, {
+      description: `We'll notify ${alertEmail} when windows open.`,
+    });
+    setAlertName('');
+    setAlertEmail('');
+    setSelectedPermits([]);
   };
 
   return (
@@ -120,7 +142,10 @@ const Permits = () => {
           ))}
         </div>
 
-        <button className="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-mono font-medium hover:bg-primary/90 transition-colors">
+        <button
+          onClick={handleSetAlerts}
+          className="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-mono font-medium hover:bg-primary/90 transition-colors"
+        >
           Set My Alerts
         </button>
       </div>

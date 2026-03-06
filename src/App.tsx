@@ -8,6 +8,7 @@ import Footer from "./components/Footer";
 import Discover from "./pages/Discover";
 import Conditions from "./pages/Conditions";
 import Permits from "./pages/Permits";
+import TrailDetail from "./pages/TrailDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,6 +26,7 @@ const App = () => (
               <Route path="/" element={<Discover />} />
               <Route path="/conditions" element={<Conditions />} />
               <Route path="/permits" element={<Permits />} />
+              <Route path="/trail/:id" element={<TrailDetail />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </main>
