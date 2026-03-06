@@ -1,6 +1,7 @@
+import { Link } from 'react-router-dom';
 import type { Trail } from '@/data/trails';
 
-const ElevationProfile = ({ data }: { data: number[] }) => {
+const ElevationProfile = ({ data, gradientId }: { data: number[]; gradientId: string }) => {
   const max = Math.max(...data);
   const width = 200;
   const height = 40;
@@ -17,12 +18,12 @@ const ElevationProfile = ({ data }: { data: number[] }) => {
   return (
     <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-10" preserveAspectRatio="none">
       <defs>
-        <linearGradient id="elev-grad" x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.3" />
           <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.02" />
         </linearGradient>
       </defs>
-      <polygon points={areaPoints} fill="url(#elev-grad)" />
+      <polygon points={areaPoints} fill={`url(#${gradientId})`} />
       <polyline points={points} fill="none" stroke="hsl(var(--primary))" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
@@ -48,9 +49,10 @@ const bugsColor: Record<string, string> = {
 
 const TrailCard = ({ trail, index }: TrailCardProps) => {
   return (
-    <div
+    <Link
+      to={`/trail/${trail.id}`}
       id={`trail-${trail.id}`}
-      className="animate-fade-in bg-card border border-border rounded-lg p-5 hover-lift relative overflow-hidden"
+      className="animate-fade-in bg-card border border-border rounded-lg p-5 hover-lift relative overflow-hidden block"
       style={{ animationDelay: `${index * 0.08}s` }}
     >
       {/* Permit Badge */}
@@ -83,7 +85,7 @@ const TrailCard = ({ trail, index }: TrailCardProps) => {
 
       {/* Elevation Profile */}
       <div className="mb-3">
-        <ElevationProfile data={trail.elevationProfile} />
+        <ElevationProfile data={trail.elevationProfile} gradientId={`elev-grad-${trail.id}`} />
       </div>
 
       {/* Sources */}
@@ -94,7 +96,7 @@ const TrailCard = ({ trail, index }: TrailCardProps) => {
           </span>
         ))}
       </div>
-    </div>
+    </Link>
   );
 };
 

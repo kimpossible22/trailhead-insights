@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { Search } from 'lucide-react';
 import { trails } from '@/data/trails';
 import TrailCard from '@/components/TrailCard';
@@ -9,7 +9,6 @@ const filters = ['All', 'Under 15km', 'No Permit', 'Dog Friendly', 'Low Elevatio
 const Discover = () => {
   const [activeFilter, setActiveFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
-  const gridRef = useRef<HTMLDivElement>(null);
 
   const scrollToTrail = (trailId: string) => {
     const el = document.getElementById(`trail-${trailId}`);
@@ -26,6 +25,8 @@ const Discover = () => {
       case 'Under 15km': return trail.distanceKm < 15;
       case 'No Permit': return trail.permitType === 'No Permit';
       case 'Low Elevation': return trail.elevationGainM < 700;
+      case 'Dog Friendly': return trail.dogFriendly;
+      case 'Less Crowded': return trail.crowdLevel === 'Low';
       default: return true;
     }
   });
