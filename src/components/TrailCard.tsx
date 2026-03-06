@@ -47,13 +47,11 @@ const bugsColor: Record<string, string> = {
 };
 
 const TrailCard = ({ trail, index }: TrailCardProps) => {
-  const delayClass = `animate-fade-in-delay-${Math.min(index % 4, 3)}`;
-
   return (
     <div
       id={`trail-${trail.id}`}
-      className={`opacity-0 ${delayClass} bg-card border border-border rounded-lg p-5 hover-lift relative overflow-hidden`}
-      style={{ animationDelay: `${index * 0.08}s`, animationFillMode: 'forwards' }}
+      className="animate-fade-in bg-card border border-border rounded-lg p-5 hover-lift relative overflow-hidden"
+      style={{ animationDelay: `${index * 0.08}s` }}
     >
       {/* Permit Badge */}
       <div className={`absolute top-3 right-3 text-[10px] font-mono font-medium px-2 py-0.5 rounded-full border ${permitBadgeStyles[trail.permitType]}`}>
