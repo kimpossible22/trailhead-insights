@@ -32,6 +32,9 @@ const Discover = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {/* Map */}
+      <MapHero onTrailClick={scrollToTrail} />
+
       {/* Search */}
       <div className="relative mb-6 animate-fade-in">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
