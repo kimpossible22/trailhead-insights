@@ -1,13 +1,20 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Search } from 'lucide-react';
 import { trails } from '@/data/trails';
 import TrailCard from '@/components/TrailCard';
+import MapHero from '@/components/MapHero';
 
 const filters = ['All', 'Under 15km', 'No Permit', 'Dog Friendly', 'Low Elevation', 'Less Crowded'];
 
 const Discover = () => {
   const [activeFilter, setActiveFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const gridRef = useRef<HTMLDivElement>(null);
+
+  const scrollToTrail = (trailId: string) => {
+    const el = document.getElementById(`trail-${trailId}`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
 
   const filteredTrails = trails.filter((trail) => {
     const matchesSearch = trail.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -25,6 +32,9 @@ const Discover = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {/* Map */}
+      <MapHero onTrailClick={scrollToTrail} />
+
       {/* Search */}
       <div className="relative mb-6 animate-fade-in">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
