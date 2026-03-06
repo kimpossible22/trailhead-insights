@@ -9,6 +9,12 @@ const filters = ['All', 'Under 15km', 'No Permit', 'Dog Friendly', 'Low Elevatio
 const Discover = () => {
   const [activeFilter, setActiveFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const gridRef = useRef<HTMLDivElement>(null);
+
+  const scrollToTrail = (trailId: string) => {
+    const el = document.getElementById(`trail-${trailId}`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
 
   const filteredTrails = trails.filter((trail) => {
     const matchesSearch = trail.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
