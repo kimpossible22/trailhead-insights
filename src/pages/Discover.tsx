@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Search } from 'lucide-react';
 import { trails } from '@/data/trails';
 import TrailCard from '@/components/TrailCard';
+import MapHero from '@/components/MapHero';
 
 const filters = ['All', 'Under 15km', 'No Permit', 'Dog Friendly', 'Low Elevation', 'Less Crowded'];
 
