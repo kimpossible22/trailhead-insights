@@ -4,6 +4,7 @@ import { trails } from '@/data/trails';
 import { permits } from '@/data/permits';
 
 const ElevationProfile = ({ data, gradientId }: { data: number[]; gradientId: string }) => {
+  if (data.length <= 1) return null;
   const max = Math.max(...data);
   const width = 600;
   const height = 80;

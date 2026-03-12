@@ -10,6 +10,7 @@ import Conditions from "./pages/Conditions";
 import Permits from "./pages/Permits";
 import TrailDetail from "./pages/TrailDetail";
 import NotFound from "./pages/NotFound";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 const queryClient = new QueryClient();
 
@@ -24,7 +25,7 @@ const App = () => (
           <main className="flex-1">
             <Routes>
               <Route path="/" element={<Discover />} />
-              <Route path="/conditions" element={<Conditions />} />
+              <Route path="/conditions" element={<ErrorBoundary><Conditions /></ErrorBoundary>} />
               <Route path="/permits" element={<Permits />} />
               <Route path="/trail/:id" element={<TrailDetail />} />
               <Route path="*" element={<NotFound />} />

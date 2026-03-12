@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import type { Trail } from '@/data/trails';
 
 const ElevationProfile = ({ data, gradientId }: { data: number[]; gradientId: string }) => {
+  if (data.length <= 1) return null;
   const max = Math.max(...data);
   const width = 200;
   const height = 40;
