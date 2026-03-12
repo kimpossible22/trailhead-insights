@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Search } from 'lucide-react';
 import { trails } from '@/data/trails';
 import TrailCard from '@/components/TrailCard';
 import MapHero from '@/components/MapHero';
 
-const filters = ['All', 'Under 15km', 'No Permit', 'Dog Friendly', 'Low Elevation', 'Less Crowded'];
+const filters = ['All', 'Under 15km', 'No Permit', 'Dog Friendly', 'Low Elevation', 'Less Crowded', 'BC Only', 'WA Only'];
 
 const Discover = () => {
   const [activeFilter, setActiveFilter] = useState('All');
@@ -15,7 +15,7 @@ const Discover = () => {
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
   };
 
-  const filteredTrails = trails.filter((trail) => {
+  const filteredTrails = useMemo(() => trails.filter((trail) => {
     const matchesSearch = trail.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       trail.region.toLowerCase().includes(searchQuery.toLowerCase());
 
@@ -27,14 +27,16 @@ const Discover = () => {
       case 'Low Elevation': return trail.elevationGainM < 700;
       case 'Dog Friendly': return trail.dogFriendly;
       case 'Less Crowded': return trail.crowdLevel === 'Low';
+      case 'BC Only': return trail.jurisdiction === 'BC';
+      case 'WA Only': return trail.jurisdiction === 'WA';
       default: return true;
     }
-  });
+  }), [activeFilter, searchQuery]);
 
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Map */}
-      <MapHero onTrailClick={scrollToTrail} />
+      <MapHero trails={filteredTrails} onTrailClick={scrollToTrail} />
 
       {/* Search */}
       <div className="relative mb-6 animate-fade-in">
