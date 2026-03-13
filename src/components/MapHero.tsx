@@ -1,10 +1,11 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { Trail } from '@/data/trails';
 
 // Fix default marker icons in Leaflet + bundlers
-delete (L.Icon.Default.prototype as any)._getIconUrl;
+delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
   iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
@@ -24,74 +25,61 @@ const trailIcon = new L.Icon({
 interface MapHeroProps {
   trails: Trail[];
   onTrailClick?: (id: string) => void;
+  heightClassName?: string;
 }
 
-const MapHero = ({ trails, onTrailClick }: MapHeroProps) => {
-  const mapContainerRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<L.Map | null>(null);
-  const markersLayerRef = useRef<L.LayerGroup | null>(null);
-
+const FitBounds = ({ trails }: { trails: Trail[] }) => {
+  const map = useMap();
   useEffect(() => {
-    if (!mapContainerRef.current || mapRef.current) return;
-
-    const map = L.map(mapContainerRef.current, {
-      center: [49.2, -122.5],
-      zoom: 7,
-      zoomControl: true,
-      scrollWheelZoom: true,
-    });
-
-    L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    }).addTo(map);
-
-    const markerLayer = L.layerGroup().addTo(map);
-    mapRef.current = map;
-    markersLayerRef.current = markerLayer;
-
-    return () => {
-      markerLayer.clearLayers();
-      map.remove();
-      mapRef.current = null;
-      markersLayerRef.current = null;
-    };
-  }, []);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    const markerLayer = markersLayerRef.current;
-    if (!map || !markerLayer) return;
-
-    markerLayer.clearLayers();
-
-    if (trails.length === 0) {
-      map.setView([49.2, -122.5], 7);
-      return;
-    }
-
-    const bounds = L.latLngBounds([]);
-
-    trails.forEach((trail) => {
-      const marker = L.marker([trail.lat, trail.lng], { icon: trailIcon });
-      marker.on('click', () => onTrailClick?.(trail.id));
-      marker.bindPopup(
-        `<div>
-          <div><strong>${trail.name}</strong></div>
-          <div>${trail.distanceKm}km · ${trail.elevationGainM}m gain · ${trail.driveTime}</div>
-          <div>${trail.region}</div>
-        </div>`
-      );
-      marker.addTo(markerLayer);
-      bounds.extend([trail.lat, trail.lng]);
-    });
-
+    if (trails.length === 0) return;
+    const bounds = L.latLngBounds(trails.map(t => [t.lat, t.lng]));
     map.fitBounds(bounds, { padding: [40, 40], maxZoom: 9 });
-  }, [trails, onTrailClick]);
+  }, [trails, map]);
+  return null;
+};
+
+const MapHero = ({ trails, onTrailClick, heightClassName = 'h-72 sm:h-96' }: MapHeroProps) => {
+  const center: [number, number] = [49.2, -122.5];
 
   return (
-    <div className="relative bg-card border border-border rounded-lg overflow-hidden mb-8 animate-fade-in">
-      <div ref={mapContainerRef} className="h-72 sm:h-96 w-full" />
-
+    <div className="relative bg-card border border-border rounded-lg overflow-hidden animate-fade-in">
+      <div className={`${heightClassName} w-full`}>
+        <MapContainer
+          center={center}
+          zoom={7}
+          className="h-full w-full"
+          style={{ background: 'hsl(var(--card))' }}
+          zoomControl={true}
+          scrollWheelZoom={true}
+        >
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
+          />
+          <FitBounds trails={trails} />
+          {trails.map((trail) => (
+            <Marker
+              key={trail.id}
+              position={[trail.lat, trail.lng]}
+              icon={trailIcon}
+              eventHandlers={{
+                click: () => onTrailClick?.(trail.id),
+              }}
+            >
+              <Popup>
+                <div className="font-sans">
+                  <div className="font-semibold text-sm">{trail.name}</div>
+                  <div className="text-xs text-gray-600 mt-1">
+                    {trail.distanceKm}km · {trail.elevationGainM}m gain · {trail.driveTime}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-0.5">{trail.region}</div>
+                </div>
+              </Popup>
+            </Marker>
+          ))}
+        </MapContainer>
+      </div>
+      {/* Legend */}
       <div className="absolute bottom-3 left-3 z-[1000] bg-card/90 backdrop-blur-sm border border-border rounded-md px-3 py-2">
         <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1">Trail Map</div>
         <div className="flex items-center gap-1">
