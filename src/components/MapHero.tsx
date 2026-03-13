@@ -25,6 +25,7 @@ const trailIcon = new L.Icon({
 interface MapHeroProps {
   trails: Trail[];
   onTrailClick?: (id: string) => void;
+  heightClassName?: string;
 }
 
 const FitBounds = ({ trails }: { trails: Trail[] }) => {
@@ -37,12 +38,12 @@ const FitBounds = ({ trails }: { trails: Trail[] }) => {
   return null;
 };
 
-const MapHero = ({ trails, onTrailClick }: MapHeroProps) => {
+const MapHero = ({ trails, onTrailClick, heightClassName = 'h-72 sm:h-96' }: MapHeroProps) => {
   const center: [number, number] = [49.2, -122.5];
 
   return (
-    <div className="relative bg-card border border-border rounded-lg overflow-hidden mb-8 animate-fade-in">
-      <div className="h-72 sm:h-96 w-full">
+    <div className="relative bg-card border border-border rounded-lg overflow-hidden animate-fade-in">
+      <div className={`${heightClassName} w-full`}>
         <MapContainer
           center={center}
           zoom={7}
