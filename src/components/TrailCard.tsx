@@ -1,6 +1,8 @@
-import { Link } from 'react-router-dom';
-import { ChevronRight, Dog, Users } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { ChevronRight, Dog, Users, CloudSun } from 'lucide-react';
 import type { Trail } from '@/data/trails';
+import { permits } from '@/data/permits';
+import { trailsWithConditions } from '@/data/conditions';
 
 const ElevationProfile = ({ data, gradientId }: { data: number[]; gradientId: string }) => {
   if (data.length <= 1) return null;
@@ -34,21 +36,20 @@ const ElevationProfile = ({ data, gradientId }: { data: number[]; gradientId: st
 interface TrailCardProps {
   trail: Trail;
   index: number;
+  highlighted?: boolean;
 }
 
-// Top accent bar colour per permit type
 const permitAccent: Record<string, string> = {
-  'Permit Required':     'bg-trail-permit',
-  'No Permit':           'bg-trail-no-permit',
-  'WA Discover Pass':    'bg-trail-wa-pass',
+  'Permit Required':      'bg-trail-permit',
+  'No Permit':            'bg-trail-no-permit',
+  'WA Discover Pass':     'bg-trail-wa-pass',
   'Northwest Forest Pass':'bg-trail-wa-pass',
 };
 
-// Small badge styles
 const permitBadge: Record<string, string> = {
-  'Permit Required':     'bg-trail-permit/10 text-trail-permit border-trail-permit/25',
-  'No Permit':           'bg-trail-no-permit/10 text-trail-no-permit border-trail-no-permit/25',
-  'WA Discover Pass':    'bg-trail-wa-pass/10 text-trail-wa-pass border-trail-wa-pass/25',
+  'Permit Required':      'bg-trail-permit/10 text-trail-permit border-trail-permit/25',
+  'No Permit':            'bg-trail-no-permit/10 text-trail-no-permit border-trail-no-permit/25',
+  'WA Discover Pass':     'bg-trail-wa-pass/10 text-trail-wa-pass border-trail-wa-pass/25',
   'Northwest Forest Pass':'bg-trail-wa-pass/10 text-trail-wa-pass border-trail-wa-pass/25',
 };
 
@@ -58,12 +59,35 @@ const crowdColor: Record<string, string> = {
   High:     'text-primary',
 };
 
-const TrailCard = ({ trail, index }: TrailCardProps) => {
+// Returns a status hint for the permit dot on the card
+const getPermitAvailability = (trail: Trail): { dot: string; label: string } => {
+  if (trail.permitType === 'No Permit') {
+    return { dot: 'bg-status-open', label: 'No permit needed' };
+  }
+  if (trail.permitType === 'WA Discover Pass' || trail.permitType === 'Northwest Forest Pass') {
+    return { dot: 'bg-trail-wa-pass', label: 'Pass required' };
+  }
+  // Permit Required — check jurisdiction permits
+  const relevant = permits.filter((p) => p.jurisdiction === trail.jurisdiction);
+  if (relevant.some((p) => p.status === 'open')) return { dot: 'bg-status-open', label: 'Permit: open' };
+  if (relevant.some((p) => p.status === 'soon')) return { dot: 'bg-status-soon', label: 'Permit: opening soon' };
+  return { dot: 'bg-status-closed', label: 'Permit: closed' };
+};
+
+const TrailCard = ({ trail, index, highlighted }: TrailCardProps) => {
+  const navigate = useNavigate();
+  const hasConditions = trailsWithConditions.has(trail.id);
+  const availability = getPermitAvailability(trail);
+
   return (
-    <Link
-      to={`/trail/${trail.id}`}
+    <div
       id={`trail-${trail.id}`}
-      className="animate-fade-in bg-card border border-border rounded-lg overflow-hidden hover-lift block group"
+      onClick={() => navigate(`/trail/${trail.id}`)}
+      className={`animate-fade-in bg-card border rounded-lg overflow-hidden hover-lift cursor-pointer group transition-all ${
+        highlighted
+          ? 'border-primary ring-2 ring-primary/30'
+          : 'border-border'
+      }`}
       style={{ animationDelay: `${index * 0.06}s` }}
     >
       {/* Permit accent bar */}
@@ -75,13 +99,27 @@ const TrailCard = ({ trail, index }: TrailCardProps) => {
           <h3 className="font-serif text-[1.05rem] leading-snug text-foreground">
             {trail.name}
           </h3>
-          <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5 group-hover:text-primary transition-colors" />
+          <div className="flex items-center gap-1.5 flex-shrink-0 mt-0.5">
+            {hasConditions && (
+              <button
+                title="View current conditions"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/trail/${trail.id}?tab=conditions`);
+                }}
+                className="p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+              >
+                <CloudSun className="h-3.5 w-3.5" />
+              </button>
+            )}
+            <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+          </div>
         </div>
         <p className="text-[11px] text-muted-foreground font-mono mb-4">
           {trail.region} · {trail.jurisdiction}
         </p>
 
-        {/* Key stats — horizontal row */}
+        {/* Key stats */}
         <div className="flex items-center gap-3 mb-4 font-mono">
           <div className="text-sm">
             <span className="text-foreground font-medium">{trail.distanceKm}</span>
@@ -103,10 +141,16 @@ const TrailCard = ({ trail, index }: TrailCardProps) => {
 
         {/* Footer row */}
         <div className="flex items-center justify-between gap-2">
-          {/* Permit badge */}
-          <span className={`text-[10px] font-mono font-medium px-2 py-0.5 rounded-full border ${permitBadge[trail.permitType]}`}>
-            {trail.permitType}
-          </span>
+          {/* Permit badge + status dot */}
+          <div className="flex items-center gap-1.5">
+            <span
+              className={`h-2 w-2 rounded-full flex-shrink-0 ${availability.dot}`}
+              title={availability.label}
+            />
+            <span className={`text-[10px] font-mono font-medium px-2 py-0.5 rounded-full border ${permitBadge[trail.permitType]}`}>
+              {trail.permitType}
+            </span>
+          </div>
 
           {/* Quick tags */}
           <div className="flex items-center gap-2">
@@ -123,7 +167,7 @@ const TrailCard = ({ trail, index }: TrailCardProps) => {
           </div>
         </div>
       </div>
-    </Link>
+    </div>
   );
 };
 
