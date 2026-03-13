@@ -1,14 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useSearchParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft, MapPin, Clock, TrendingUp, Bug, Dog, Users,
   Cloud, Sun, Wind, Eye, Thermometer, Droplets, Sunrise, Sunset,
-  Bell, ExternalLink, RefreshCw,
+  Bell, ExternalLink, RefreshCw, Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { trails } from '@/data/trails';
 import { permits } from '@/data/permits';
 import { conditionsByTrail } from '@/data/conditions';
+import type { TrailConditions } from '@/data/conditions';
+import { fetchLiveConditions } from '@/services/weather';
+import { fetchAllLiveTrailData } from '@/services/trailData';
+import type { LiveTrailData } from '@/services/trailData';
 
 const weatherIcons = [Sun, Cloud, Cloud, Sun, Cloud];
 
@@ -77,6 +81,45 @@ const TrailDetail = () => {
   const trail = trails.find((t) => t.id === id);
   const activeTab = (searchParams.get('tab') as Tab) ?? 'overview';
 
+  // Live conditions state — start with static fallback, then fetch live
+  const [conditions, setConditions] = useState<TrailConditions | undefined>(
+    trail ? conditionsByTrail[trail.id] : undefined
+  );
+  const [conditionsLoading, setConditionsLoading] = useState(false);
+  const [conditionsLive, setConditionsLive] = useState(false);
+  const [conditionsFetchedAt, setConditionsFetchedAt] = useState<Date | null>(null);
+
+  // Live trail data from OSM / Hiking Project / TrailAPI
+  const [liveTrailData, setLiveTrailData] = useState<LiveTrailData | null>(null);
+  const [trailDataLoading, setTrailDataLoading] = useState(false);
+
+  const loadLiveConditions = useCallback(async () => {
+    if (!trail) return;
+    setConditionsLoading(true);
+    const result = await fetchLiveConditions(trail);
+    setConditionsLoading(false);
+    if (result.ok) {
+      setConditions(result.data);
+      setConditionsLive(true);
+      setConditionsFetchedAt(new Date());
+    } else {
+      toast.error('Could not load live conditions — showing cached data.', { description: result.error });
+    }
+  }, [trail]);
+
+  const loadLiveTrailData = useCallback(async () => {
+    if (!trail) return;
+    setTrailDataLoading(true);
+    const data = await fetchAllLiveTrailData(trail);
+    setLiveTrailData(data);
+    setTrailDataLoading(false);
+  }, [trail]);
+
+  useEffect(() => {
+    loadLiveConditions();
+    loadLiveTrailData();
+  }, [loadLiveConditions, loadLiveTrailData]);
+
   if (!trail) {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
@@ -88,7 +131,6 @@ const TrailDetail = () => {
     );
   }
 
-  const conditions = conditionsByTrail[trail.id];
   const relatedPermits = permits.filter((p) => p.jurisdiction === trail.jurisdiction);
 
   const setTab = (tab: Tab) => {
@@ -108,7 +150,7 @@ const TrailDetail = () => {
 
   const tabs: { key: Tab; label: string; disabled?: boolean }[] = [
     { key: 'overview',   label: 'Overview' },
-    { key: 'conditions', label: 'Conditions', disabled: !conditions },
+    { key: 'conditions', label: 'Conditions', disabled: !conditions && !conditionsLoading },
     { key: 'permit',     label: 'Permit' },
   ];
 
@@ -202,8 +244,162 @@ const TrailDetail = () => {
             </div>
           </div>
 
+          {/* Live Trail Data */}
+          <div className="bg-card border border-border rounded-lg p-6 mb-6 animate-fade-in" style={{ animationDelay: '0.15s' }}>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-serif text-lg text-foreground">Live Trail Data</h2>
+              {trailDataLoading && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+              {!trailDataLoading && liveTrailData && (
+                <span className="text-[10px] font-mono text-status-open">● Live</span>
+              )}
+            </div>
+
+            {trailDataLoading && !liveTrailData && (
+              <p className="text-xs font-mono text-muted-foreground">Fetching from OSM, Hiking Project, TrailAPI…</p>
+            )}
+
+            {liveTrailData && (
+              <div className="space-y-3">
+                {/* OpenStreetMap data */}
+                {liveTrailData.osm ? (
+                  <div>
+                    <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-1.5">
+                      OpenStreetMap
+                    </div>
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-1">
+                      {liveTrailData.osm.name && (
+                        <div className="text-xs font-mono text-foreground col-span-2">
+                          <span className="text-muted-foreground">Name: </span>{liveTrailData.osm.name}
+                        </div>
+                      )}
+                      {liveTrailData.osm.surface && (
+                        <div className="text-xs font-mono text-foreground">
+                          <span className="text-muted-foreground">Surface: </span>{liveTrailData.osm.surface}
+                        </div>
+                      )}
+                      {liveTrailData.osm.access && (
+                        <div className="text-xs font-mono text-foreground">
+                          <span className="text-muted-foreground">Access: </span>{liveTrailData.osm.access}
+                        </div>
+                      )}
+                      {liveTrailData.osm.operator && (
+                        <div className="text-xs font-mono text-foreground col-span-2">
+                          <span className="text-muted-foreground">Operator: </span>{liveTrailData.osm.operator}
+                        </div>
+                      )}
+                      {liveTrailData.osm.network && (
+                        <div className="text-xs font-mono text-foreground">
+                          <span className="text-muted-foreground">Network: </span>{liveTrailData.osm.network}
+                        </div>
+                      )}
+                      {liveTrailData.osm.lengthKm != null && (
+                        <div className="text-xs font-mono text-foreground">
+                          <span className="text-muted-foreground">Length: </span>{liveTrailData.osm.lengthKm.toFixed(1)} km
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  !trailDataLoading && (
+                    <div className="text-xs font-mono text-muted-foreground">
+                      <span className="text-[10px] uppercase tracking-wider block mb-0.5">OpenStreetMap</span>
+                      No matching OSM trail found nearby.
+                    </div>
+                  )
+                )}
+
+                {/* Hiking Project data */}
+                {liveTrailData.hikingProject ? (
+                  <div className="pt-3 border-t border-border">
+                    <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-1.5">
+                      Hiking Project
+                    </div>
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-1">
+                      <div className="text-xs font-mono text-foreground col-span-2">
+                        <span className="text-muted-foreground">Name: </span>{liveTrailData.hikingProject.name}
+                      </div>
+                      <div className="text-xs font-mono text-foreground">
+                        <span className="text-muted-foreground">Difficulty: </span>{liveTrailData.hikingProject.difficulty}
+                      </div>
+                      <div className="text-xs font-mono text-foreground">
+                        <span className="text-muted-foreground">Rating: </span>★ {liveTrailData.hikingProject.stars.toFixed(1)} ({liveTrailData.hikingProject.starVotes} votes)
+                      </div>
+                      <div className="text-xs font-mono text-foreground">
+                        <span className="text-muted-foreground">Length: </span>{(liveTrailData.hikingProject.length * 1.609).toFixed(1)} km
+                      </div>
+                      <div className="text-xs font-mono text-foreground">
+                        <span className="text-muted-foreground">Ascent: </span>{Math.round(liveTrailData.hikingProject.ascent * 0.3048)} m
+                      </div>
+                      {liveTrailData.hikingProject.conditionStatus && liveTrailData.hikingProject.conditionStatus !== 'Unknown' && (
+                        <div className="text-xs font-mono text-foreground col-span-2">
+                          <span className="text-muted-foreground">Condition: </span>
+                          <span className={liveTrailData.hikingProject.conditionStatus.toLowerCase().includes('good') ? 'text-status-open' : 'text-status-soon'}>
+                            {liveTrailData.hikingProject.conditionStatus}
+                          </span>
+                          {liveTrailData.hikingProject.conditionDetails && (
+                            <span className="text-muted-foreground"> — {liveTrailData.hikingProject.conditionDetails}</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    {liveTrailData.hikingProject.url && (
+                      <a href={liveTrailData.hikingProject.url} target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-[10px] font-mono text-primary hover:underline mt-2">
+                        <ExternalLink className="h-2.5 w-2.5" />
+                        View on Hiking Project
+                      </a>
+                    )}
+                  </div>
+                ) : (
+                  !trailDataLoading && !import.meta.env.VITE_HIKING_PROJECT_KEY && (
+                    <div className="pt-3 border-t border-border text-xs font-mono text-muted-foreground/60">
+                      <span className="text-[10px] uppercase tracking-wider block mb-0.5">Hiking Project</span>
+                      Add <code className="bg-secondary px-1 rounded">VITE_HIKING_PROJECT_KEY</code> to enable.
+                    </div>
+                  )
+                )}
+
+                {/* TrailAPI data */}
+                {liveTrailData.trailApi ? (
+                  <div className="pt-3 border-t border-border">
+                    <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-1.5">
+                      TrailAPI
+                    </div>
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-1">
+                      <div className="text-xs font-mono text-foreground col-span-2">
+                        <span className="text-muted-foreground">Name: </span>{liveTrailData.trailApi.name}
+                      </div>
+                      {liveTrailData.trailApi.difficulty && (
+                        <div className="text-xs font-mono text-foreground">
+                          <span className="text-muted-foreground">Difficulty: </span>{liveTrailData.trailApi.difficulty}
+                        </div>
+                      )}
+                      {liveTrailData.trailApi.length > 0 && (
+                        <div className="text-xs font-mono text-foreground">
+                          <span className="text-muted-foreground">Length: </span>{liveTrailData.trailApi.length.toFixed(1)} km
+                        </div>
+                      )}
+                      {liveTrailData.trailApi.region && (
+                        <div className="text-xs font-mono text-foreground col-span-2">
+                          <span className="text-muted-foreground">Region: </span>{liveTrailData.trailApi.city}, {liveTrailData.trailApi.region}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  !trailDataLoading && !import.meta.env.VITE_TRAIL_API_KEY && (
+                    <div className="pt-3 border-t border-border text-xs font-mono text-muted-foreground/60">
+                      <span className="text-[10px] uppercase tracking-wider block mb-0.5">TrailAPI</span>
+                      Add <code className="bg-secondary px-1 rounded">VITE_TRAIL_API_KEY</code> to enable.
+                    </div>
+                  )
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Data Sources */}
-          <div className="bg-card border border-border rounded-lg p-6 animate-fade-in" style={{ animationDelay: '0.15s' }}>
+          <div className="bg-card border border-border rounded-lg p-6 animate-fade-in" style={{ animationDelay: '0.2s' }}>
             <h2 className="font-serif text-lg text-foreground mb-3">Data Sources</h2>
             <div className="flex flex-wrap gap-2">
               {trail.sources.map((source) => (
@@ -211,12 +407,20 @@ const TrailDetail = () => {
                   {source}
                 </span>
               ))}
+              <span className="text-xs font-mono text-muted-foreground bg-secondary rounded-full px-3 py-1">Open-Meteo</span>
+              <span className="text-xs font-mono text-muted-foreground bg-secondary rounded-full px-3 py-1">OpenStreetMap</span>
             </div>
           </div>
         </>
       )}
 
       {/* ── Conditions Tab ────────────────────────────────────────── */}
+      {activeTab === 'conditions' && conditionsLoading && !conditions && (
+        <div className="flex items-center justify-center py-24 text-muted-foreground font-mono text-sm gap-2 animate-fade-in">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Fetching live conditions…
+        </div>
+      )}
       {activeTab === 'conditions' && conditions && (
         <div key={refreshKey}>
           {/* Weather */}
@@ -305,12 +509,19 @@ const TrailDetail = () => {
 
           {/* Last Updated */}
           <div className="flex items-center justify-between text-xs font-mono text-muted-foreground animate-fade-in" style={{ animationDelay: '0.3s' }}>
-            <span>Last updated: {new Date().toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' })} — simulated data</span>
+            <span>
+              {conditionsLive && conditionsFetchedAt
+                ? `Live data · fetched ${conditionsFetchedAt.toLocaleTimeString('en-CA', { hour: '2-digit', minute: '2-digit' })} · Open-Meteo`
+                : 'Cached data · click Refresh for live conditions'}
+            </span>
             <button
-              className="flex items-center gap-1.5 text-primary hover:text-primary/80 transition-colors"
-              onClick={() => setRefreshKey((k) => k + 1)}
+              className="flex items-center gap-1.5 text-primary hover:text-primary/80 transition-colors disabled:opacity-50"
+              disabled={conditionsLoading}
+              onClick={() => { setRefreshKey((k) => k + 1); loadLiveConditions(); }}
             >
-              <RefreshCw className="h-3 w-3" />
+              {conditionsLoading
+                ? <Loader2 className="h-3 w-3 animate-spin" />
+                : <RefreshCw className="h-3 w-3" />}
               Refresh
             </button>
           </div>
