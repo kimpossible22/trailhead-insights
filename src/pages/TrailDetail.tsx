@@ -2,15 +2,11 @@ import { useState } from 'react';
 import { useParams, useSearchParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft, MapPin, Clock, TrendingUp, Bug, Dog, Users,
-  Cloud, Sun, Wind, Eye, Thermometer, Droplets, Sunrise, Sunset,
-  Bell, ExternalLink, RefreshCw,
+  Bell, ExternalLink,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { trails } from '@/data/trails';
 import { permits } from '@/data/permits';
-import { conditionsByTrail } from '@/data/conditions';
-
-const weatherIcons = [Sun, Cloud, Cloud, Sun, Cloud];
 
 // ── Elevation Profile ──────────────────────────────────────────────────────
 
@@ -60,7 +56,7 @@ const crowdColor: Record<string, string> = {
   Low: 'text-status-open', Moderate: 'text-status-soon', High: 'text-primary',
 };
 
-type Tab = 'overview' | 'conditions' | 'permit';
+type Tab = 'overview' | 'permit';
 
 // ── Page ───────────────────────────────────────────────────────────────────
 
@@ -68,9 +64,7 @@ const TrailDetail = () => {
   const { id } = useParams<{ id: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [refreshKey, setRefreshKey] = useState(0);
 
-  // Permit alert state
   const [alertEmail, setAlertEmail] = useState('');
   const [alertOpen, setAlertOpen] = useState(false);
 
@@ -88,7 +82,6 @@ const TrailDetail = () => {
     );
   }
 
-  const conditions = conditionsByTrail[trail.id];
   const relatedPermits = permits.filter((p) => p.jurisdiction === trail.jurisdiction);
 
   const setTab = (tab: Tab) => {
@@ -106,10 +99,9 @@ const TrailDetail = () => {
     setAlertOpen(false);
   };
 
-  const tabs: { key: Tab; label: string; disabled?: boolean }[] = [
-    { key: 'overview',   label: 'Overview' },
-    { key: 'conditions', label: 'Conditions', disabled: !conditions },
-    { key: 'permit',     label: 'Permit' },
+  const tabs: { key: Tab; label: string }[] = [
+    { key: 'overview', label: 'Overview' },
+    { key: 'permit',   label: 'Permit' },
   ];
 
   return (
@@ -140,23 +132,17 @@ const TrailDetail = () => {
 
       {/* Tabs */}
       <div className="flex gap-0.5 mb-6 bg-secondary rounded-lg p-1 w-fit animate-fade-in" style={{ animationDelay: '0.05s' }}>
-        {tabs.map(({ key, label, disabled }) => (
+        {tabs.map(({ key, label }) => (
           <button
             key={key}
-            onClick={() => !disabled && setTab(key)}
-            disabled={disabled}
+            onClick={() => setTab(key)}
             className={`px-4 py-2 rounded-md text-sm font-mono transition-colors ${
               activeTab === key
                 ? 'bg-card text-foreground shadow-sm'
-                : disabled
-                ? 'text-muted-foreground/40 cursor-not-allowed'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             {label}
-            {key === 'conditions' && !conditions && (
-              <span className="ml-1.5 text-[9px] font-mono opacity-60">N/A</span>
-            )}
           </button>
         ))}
       </div>
@@ -214,107 +200,6 @@ const TrailDetail = () => {
             </div>
           </div>
         </>
-      )}
-
-      {/* ── Conditions Tab ────────────────────────────────────────── */}
-      {activeTab === 'conditions' && conditions && (
-        <div key={refreshKey}>
-          {/* Weather */}
-          <div className="bg-card border border-border rounded-lg p-6 mb-6 animate-fade-in">
-            <h2 className="font-serif text-lg text-foreground mb-4">Weather</h2>
-            <div className="flex items-start gap-6 mb-6">
-              <div>
-                <div className="text-4xl font-mono font-semibold text-foreground">{conditions.weather.temp}°C</div>
-                <div className="text-sm text-muted-foreground mt-1">{conditions.weather.description}</div>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-              {[
-                { icon: Wind,        label: 'Wind',       value: conditions.weather.wind },
-                { icon: Droplets,    label: 'Precip',     value: conditions.weather.precip },
-                { icon: Thermometer, label: 'Snow Level', value: conditions.weather.snowLevel },
-                { icon: Eye,         label: 'Visibility', value: conditions.weather.visibility },
-              ].map((item) => (
-                <div key={item.label} className="flex items-center gap-2">
-                  <item.icon className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <div className="text-[10px] font-mono uppercase text-muted-foreground">{item.label}</div>
-                    <div className="text-sm font-mono text-foreground">{item.value}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* 5-day Forecast */}
-            <div className="grid grid-cols-5 gap-2">
-              {conditions.forecast.map((day) => {
-                const Icon = weatherIcons[day.icon];
-                return (
-                  <div key={day.day} className="text-center bg-secondary/50 rounded-md py-3">
-                    <div className="text-xs font-mono text-muted-foreground mb-1">{day.day}</div>
-                    <Icon className="h-5 w-5 mx-auto text-foreground mb-1" />
-                    <div className="text-xs font-mono">
-                      <span className="text-foreground">{day.high}°</span>
-                      <span className="text-muted-foreground"> / {day.low}°</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Trail Conditions */}
-          <div className="bg-card border border-border rounded-lg p-6 mb-6 animate-fade-in" style={{ animationDelay: '0.1s' }}>
-            <h2 className="font-serif text-lg text-foreground mb-4">Trail Conditions</h2>
-            <div className="space-y-4">
-              {conditions.trail.map((condition) => (
-                <div key={condition.label}>
-                  <div className="flex justify-between mb-1">
-                    <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">{condition.label}</span>
-                    <span className="text-xs font-mono text-foreground">{condition.level}</span>
-                  </div>
-                  <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full ${condition.color} transition-all`} style={{ width: `${condition.value}%` }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Trip Info */}
-          <div className="bg-card border border-border rounded-lg p-6 mb-6 animate-fade-in" style={{ animationDelay: '0.2s' }}>
-            <h2 className="font-serif text-lg text-foreground mb-4">Trip Info</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {[
-                { icon: Sunrise, label: 'Sunrise',       value: conditions.trip.sunrise },
-                { icon: Sunset,  label: 'Sunset',        value: conditions.trip.sunset },
-                { icon: null,    label: 'Best Start',    value: conditions.trip.bestStart },
-                { icon: null,    label: 'Bear Activity', value: conditions.trip.bearActivity ? 'Yes — carry spray' : 'Low risk' },
-                { icon: null,    label: 'Campfire Ban',  value: conditions.trip.campfireRestrictions ? 'In effect' : 'No restrictions' },
-              ].map((item) => (
-                <div key={item.label}>
-                  <div className="text-[10px] font-mono uppercase text-muted-foreground tracking-wider">{item.label}</div>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    {item.icon && <item.icon className="h-3.5 w-3.5 text-muted-foreground" />}
-                    <span className="text-sm font-mono text-foreground">{item.value}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Last Updated */}
-          <div className="flex items-center justify-between text-xs font-mono text-muted-foreground animate-fade-in" style={{ animationDelay: '0.3s' }}>
-            <span>Last updated: {new Date().toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' })} — simulated data</span>
-            <button
-              className="flex items-center gap-1.5 text-primary hover:text-primary/80 transition-colors"
-              onClick={() => setRefreshKey((k) => k + 1)}
-            >
-              <RefreshCw className="h-3 w-3" />
-              Refresh
-            </button>
-          </div>
-        </div>
       )}
 
       {/* ── Permit Tab ────────────────────────────────────────────── */}
