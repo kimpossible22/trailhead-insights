@@ -1,8 +1,17 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, Dog, Users, CloudSun } from 'lucide-react';
+import {
+  ChevronRight, Dog, Users,
+  Sun, CloudSun, Cloud, CloudFog, CloudDrizzle, CloudRain, CloudSnow, CloudLightning,
+  Wind, Thermometer,
+} from 'lucide-react';
 import type { Trail } from '@/data/trails';
 import { permits } from '@/data/permits';
-import { trailsWithConditions } from '@/data/conditions';
+import { fetchTrailWeather, type LiveWeather } from '@/services/weather';
+
+const WEATHER_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  Sun, CloudSun, Cloud, CloudFog, CloudDrizzle, CloudRain, CloudSnow, CloudLightning,
+};
 
 const ElevationProfile = ({ data, gradientId }: { data: number[]; gradientId: string }) => {
   if (data.length <= 1) return null;
@@ -59,7 +68,6 @@ const crowdColor: Record<string, string> = {
   High:     'text-primary',
 };
 
-// Returns a status hint for the permit dot on the card
 const getPermitAvailability = (trail: Trail): { dot: string; label: string } => {
   if (trail.permitType === 'No Permit') {
     return { dot: 'bg-status-open', label: 'No permit needed' };
@@ -67,17 +75,71 @@ const getPermitAvailability = (trail: Trail): { dot: string; label: string } => 
   if (trail.permitType === 'WA Discover Pass' || trail.permitType === 'Northwest Forest Pass') {
     return { dot: 'bg-trail-wa-pass', label: 'Pass required' };
   }
-  // Permit Required — check jurisdiction permits
   const relevant = permits.filter((p) => p.jurisdiction === trail.jurisdiction);
   if (relevant.some((p) => p.status === 'open')) return { dot: 'bg-status-open', label: 'Permit: open' };
   if (relevant.some((p) => p.status === 'soon')) return { dot: 'bg-status-soon', label: 'Permit: opening soon' };
   return { dot: 'bg-status-closed', label: 'Permit: closed' };
 };
 
+// Inline weather strip shown on each card
+const WeatherStrip = ({ weather, loading }: { weather: LiveWeather | null; loading: boolean }) => {
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 py-2 px-3 rounded-md bg-muted/40 mb-3 animate-pulse">
+        <div className="h-3 w-3 rounded-full bg-muted-foreground/30" />
+        <div className="h-2.5 w-20 rounded bg-muted-foreground/20" />
+        <div className="ml-auto h-2.5 w-12 rounded bg-muted-foreground/20" />
+      </div>
+    );
+  }
+  if (!weather) return null;
+
+  const IconComp = WEATHER_ICONS[weather.icon] ?? CloudSun;
+
+  return (
+    <div
+      className="flex items-center gap-2 py-2 px-3 rounded-md bg-muted/40 mb-3 text-[11px] font-mono"
+      onClick={(e) => e.stopPropagation()}
+      title="Live weather conditions"
+    >
+      <IconComp className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+      <span className="text-foreground">{weather.description}</span>
+      <span className="ml-auto flex items-center gap-2 text-muted-foreground">
+        <span className="flex items-center gap-0.5">
+          <Thermometer className="h-3 w-3" />
+          {weather.tempC}°C
+        </span>
+        <span className="flex items-center gap-0.5">
+          <Wind className="h-3 w-3" />
+          {weather.windKph} km/h
+        </span>
+      </span>
+    </div>
+  );
+};
+
 const TrailCard = ({ trail, index, highlighted }: TrailCardProps) => {
   const navigate = useNavigate();
-  const hasConditions = trailsWithConditions.has(trail.id);
   const availability = getPermitAvailability(trail);
+  const [weather, setWeather] = useState<LiveWeather | null>(null);
+  const [weatherLoading, setWeatherLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    // Stagger fetches slightly so we don't hammer the API all at once
+    const delay = index * 80;
+    const timer = setTimeout(async () => {
+      try {
+        const data = await fetchTrailWeather(trail.lat, trail.lng);
+        if (!cancelled) setWeather(data);
+      } catch {
+        // silently fail — strip is hidden if no data
+      } finally {
+        if (!cancelled) setWeatherLoading(false);
+      }
+    }, delay);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [trail.lat, trail.lng, index]);
 
   return (
     <div
@@ -99,21 +161,7 @@ const TrailCard = ({ trail, index, highlighted }: TrailCardProps) => {
           <h3 className="font-serif text-[1.05rem] leading-snug text-foreground">
             {trail.name}
           </h3>
-          <div className="flex items-center gap-1.5 flex-shrink-0 mt-0.5">
-            {hasConditions && (
-              <button
-                title="View current conditions"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigate(`/trail/${trail.id}?tab=conditions`);
-                }}
-                className="p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
-              >
-                <CloudSun className="h-3.5 w-3.5" />
-              </button>
-            )}
-            <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-          </div>
+          <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0 mt-0.5" />
         </div>
         <p className="text-[11px] text-muted-foreground font-mono mb-4">
           {trail.region} · {trail.jurisdiction}
@@ -138,6 +186,9 @@ const TrailCard = ({ trail, index, highlighted }: TrailCardProps) => {
         <div className="mb-4 -mx-1">
           <ElevationProfile data={trail.elevationProfile} gradientId={`elev-grad-${trail.id}`} />
         </div>
+
+        {/* Live weather strip */}
+        <WeatherStrip weather={weather} loading={weatherLoading} />
 
         {/* Footer row */}
         <div className="flex items-center justify-between gap-2">
