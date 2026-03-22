@@ -24,10 +24,10 @@ const App = () => (
           <Header />
           <main className="flex-1">
             <Routes>
-              <Route path="/" element={<Discover />} />
+              <Route path="/" element={<ErrorBoundary><Discover /></ErrorBoundary>} />
               <Route path="/conditions" element={<ErrorBoundary><Conditions /></ErrorBoundary>} />
-              <Route path="/permits" element={<Permits />} />
-              <Route path="/trail/:id" element={<TrailDetail />} />
+              <Route path="/permits" element={<ErrorBoundary><Permits /></ErrorBoundary>} />
+              <Route path="/trail/:id" element={<ErrorBoundary><TrailDetail /></ErrorBoundary>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </main>

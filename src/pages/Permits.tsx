@@ -17,7 +17,6 @@ const actionStyles = {
 
 const Permits = () => {
   const [activeTab, setActiveTab] = useState<'BC' | 'WA'>('BC');
-  const [alertName, setAlertName] = useState('');
   const [alertEmail, setAlertEmail] = useState('');
   const [selectedPermits, setSelectedPermits] = useState<string[]>([]);
 
@@ -45,7 +44,6 @@ const Permits = () => {
     toast.success(`Alerts set for: ${names}`, {
       description: `We'll notify ${alertEmail} when windows open.`,
     });
-    setAlertName('');
     setAlertEmail('');
     setSelectedPermits([]);
   };
@@ -78,7 +76,7 @@ const Permits = () => {
           <div
             key={permit.id}
             className="bg-card border border-border rounded-lg p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in"
-            style={{ animationDelay: `${0.15 + i * 0.05}s`, animationFillMode: 'forwards', opacity: 0 }}
+            style={{ animationDelay: `${0.15 + i * 0.05}s` }}
           >
             <div className="flex items-start gap-3">
               <span className={`mt-1.5 h-2.5 w-2.5 rounded-full flex-shrink-0 ${statusStyles[permit.status]}`} />
@@ -109,20 +107,13 @@ const Permits = () => {
           <h3 className="font-serif text-lg text-foreground">Get notified when permit windows open</h3>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-          <input
-            type="text"
-            placeholder="Your name"
-            value={alertName}
-            onChange={(e) => setAlertName(e.target.value)}
-            className="bg-secondary border border-border rounded-md px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
-          />
+        <div className="mb-4">
           <input
             type="email"
             placeholder="Your email"
             value={alertEmail}
             onChange={(e) => setAlertEmail(e.target.value)}
-            className="bg-secondary border border-border rounded-md px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+            className="w-full bg-secondary border border-border rounded-md px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
           />
         </div>
 

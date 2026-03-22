@@ -24,8 +24,8 @@ const SORT_OPTIONS = [
 ] as const;
 
 const parseDriveMinutes = (t: string) => {
-  const h = parseInt(t.match(/(\d+)h/)?.[1] ?? '0');
-  const m = parseInt(t.match(/(\d+)m/)?.[1] ?? '0');
+  const h = parseInt(t.match(/(\d+)h/)?.[1] ?? '0', 10);
+  const m = parseInt(t.match(/(\d+)m/)?.[1] ?? '0', 10);
   return h * 60 + m;
 };
 

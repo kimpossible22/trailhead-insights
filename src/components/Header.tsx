@@ -20,6 +20,7 @@ const Header = () => {
         <nav className="flex items-center gap-1">
           {[
             { to: '/', label: 'Discover' },
+            { to: '/conditions', label: 'Conditions' },
             { to: '/permits', label: 'Permits' },
           ].map((link) => (
             <NavLink

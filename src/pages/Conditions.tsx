@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { trails } from '@/data/trails';
 import { conditionsByTrail } from '@/data/conditions';
 import { Cloud, Sun, Wind, Eye, Thermometer, Droplets, Sunrise, Sunset, RefreshCw } from 'lucide-react';
 
-const weatherIcons = [Sun, Cloud, Cloud, Sun, Cloud];
+const weatherIconMap: Record<number, typeof Sun> = { 0: Sun, 1: Cloud, 2: Cloud, 3: Sun, 4: Cloud };
+const getWeatherIcon = (index: number) => weatherIconMap[index] ?? Cloud;
 
 const trailsWithData = trails.filter((t) => conditionsByTrail[t.id]);
 
@@ -18,7 +19,7 @@ const Conditions = () => {
   const alternatives = trailsWithData.filter((t) => t.id !== selectedTrail).slice(0, 3);
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl" key={refreshKey}>
+    <div className="container mx-auto px-4 py-8 max-w-4xl">
       {/* Trail Selector */}
       <div className="mb-8 animate-fade-in">
         <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider mb-2 block">Select Trail</label>
@@ -45,7 +46,7 @@ const Conditions = () => {
       </h2>
 
       {!conditions ? (
-        <div className="animate-fade-in">
+        <div className="animate-fade-in" key={refreshKey}>
           <div className="bg-card border border-border rounded-lg p-12 text-center mb-6">
             <div className="text-muted-foreground font-mono text-sm mb-1">No conditions data available for this trail yet.</div>
             <div className="text-muted-foreground font-mono text-xs">Check back soon — we're adding more trails regularly.</div>
@@ -94,7 +95,7 @@ const Conditions = () => {
           )}
         </div>
       ) : (
-        <>
+        <React.Fragment key={refreshKey}>
           {/* Weather Panel */}
           <div className="bg-card border border-border rounded-lg p-6 mb-6 animate-fade-in" style={{ animationDelay: '0.1s' }}>
             <h3 className="font-serif text-lg text-foreground mb-4">Weather</h3>
@@ -124,7 +125,7 @@ const Conditions = () => {
             {/* 5-day Forecast */}
             <div className="grid grid-cols-5 gap-2">
               {conditions.forecast.map((day) => {
-                const Icon = weatherIcons[day.icon];
+                const Icon = getWeatherIcon(day.icon);
                 return (
                   <div key={day.day} className="text-center bg-secondary/50 rounded-md py-3">
                     <div className="text-xs font-mono text-muted-foreground mb-1">{day.day}</div>
@@ -195,7 +196,7 @@ const Conditions = () => {
               </button>
             </div>
           </div>
-        </>
+        </React.Fragment>
       )}
     </div>
   );
